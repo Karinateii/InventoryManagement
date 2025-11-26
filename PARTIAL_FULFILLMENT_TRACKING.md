@@ -1,12 +1,13 @@
-# Purchase Order Partial Fulfillment Tracking
+# Partial Fulfillment Tracking
 
-## Overview
-This feature allows you to track partial fulfillment of purchase orders. When you receive shipments in multiple batches (e.g., ordering 100 units but receiving 50 now and 50 later), the system now tracks:
+## What it does
+
+Tracks partial shipments of purchase orders. If you order 100 units but receive them in two shipments (50 now, 50 later), the system now tracks:
 - How much has been received
-- How much is still outstanding
-- The fulfillment percentage
+- How much is still outstanding  
+- Fulfillment percentage
 
-## Changes Made
+## Implementation
 
 ### 1. Database Changes
 **Migration:** `20251126220745_AddQuantityReceivedToPurchaseOrder`
@@ -66,112 +67,28 @@ Added:
 - Auto-suggests remaining quantity when PO selected
 - Forces "Add" adjustment type when receiving PO items
 
-## How It Works
+## Usage
 
-### Scenario: Your Purchase Order
-You mentioned: "i made a purchase order of 100 when i had just 50 then i made the stock adjustment of 50"
+### Receiving Stock
 
-**Before (Old System):**
-- Purchase Order: 100 units ordered
-- Stock Adjustment: Added 50 units
-- ❌ No tracking of how much of the PO was received
-
-**After (New System):**
-1. **Create Purchase Order:** 100 units
-   - Status: Pending
-   - Quantity Ordered: 100
-   - Quantity Received: 0
-   - Quantity Remaining: 100
-   - Fulfillment: 0%
-
-2. **First Shipment Arrives (50 units):**
-   - Go to Stock Adjustment
-   - Select "Purchase Order Received" as reason
-   - Select the purchase order from dropdown
-   - Enter quantity: 50
-   - Submit
-   
-   **Result:**
-   - Stock increased by 50
-   - PO updated:
-     - Status: Partially Received
-     - Quantity Received: 50
-     - Quantity Remaining: 50
-     - Fulfillment: 50%
-
-3. **Second Shipment Arrives (50 units):**
-   - Repeat stock adjustment for remaining 50 units
-   
-   **Result:**
-   - Stock increased by 50 more
-   - PO updated:
-     - Status: Received (auto-changed)
-     - Quantity Received: 100
-     - Quantity Remaining: 0
-     - Fulfillment: 100%
-
-## Usage Instructions
-
-### Viewing Purchase Order Status
-1. Navigate to **Purchase Orders** (User menu)
-2. The index page shows all purchase orders with:
-   - Qty Ordered
-   - Qty Received
-   - Qty Remaining
-   - Visual progress bar showing fulfillment percentage
-
-### Receiving Purchase Order Items
-1. Navigate to **Admin → Lab Supplies**
+1. Go to Admin → Lab Supplies
 2. Click on the supply you're receiving
 3. Click "Adjust Stock"
-4. Select **"Purchase Order Received"** as the reason
-5. **Purchase Order dropdown appears:**
-   - Shows all pending/partially received POs for this supply
-   - Displays ordered, received, and remaining quantities
-6. Select the purchase order
-7. System auto-fills the remaining quantity (you can change it)
-8. Click "Confirm Adjustment"
+4. Select "Purchase Order Received"
+5. Choose the PO from the dropdown
+6. Enter quantity (defaults to remaining amount)
+7. Submit
 
-### Validation
-The system prevents:
-- Receiving more than ordered
-- Shows error: "Cannot receive more than ordered. Ordered: X, Already Received: Y"
+The system validates you don't receive more than ordered and auto-updates the PO status.
 
-## Benefits
-
-1. **Full Traceability:** Know exactly how much of each PO has been received
-2. **Accurate Inventory:** Stock adjustments are linked to purchase orders
-3. **Status Automation:** Order status updates automatically based on fulfillment
-4. **Visual Progress:** Progress bars show fulfillment at a glance
-5. **Prevents Over-Receiving:** Validates you don't receive more than ordered
-
-## Testing Your Scenario
-
-To test with your existing data:
-1. Run the application
-2. View your purchase order in the Purchase Orders list
-3. You should now see:
-   - Quantity Received: 0 (since it was created before this feature)
-   - Quantity Remaining: 100
-   - Fulfillment: 0%
-4. To fix historical data, do a stock adjustment:
-   - Go to the supply
-   - Adjust stock → "Purchase Order Received"
-   - Select your PO
-   - Enter 50 (the amount you already received)
-   - This will update the PO to show 50 received, 50 remaining
-
-## Database Schema
+## Database Changes
 
 ```sql
--- New column added to PurchaseOrders table
 ALTER TABLE PurchaseOrders 
 ADD QuantityReceived int NOT NULL DEFAULT 0;
 ```
 
-## Notes
-
-- The feature is backward compatible - existing purchase orders default to 0 received
-- You can optionally link stock adjustments to POs (not required)
-- Manual stock adjustments (not from POs) still work the same way
-- Status changes are automatic based on fulfillment percentage
+New calculated properties:
+- `QuantityRemaining` = QuantityOrdered - QuantityReceived
+- `IsFullyReceived` = QuantityReceived >= QuantityOrdered
+- `FulfillmentPercentage` = (QuantityReceived / QuantityOrdered) × 100

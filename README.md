@@ -1,111 +1,38 @@
-# 🧪 Laboratory Inventory Management System (LIMS)
+# Laboratory Inventory Management System
 
-[![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
-[![ASP.NET Core](https://img.shields.io/badge/ASP.NET%20Core-8.0-512BD4)](https://docs.microsoft.com/en-us/aspnet/core/)
-[![Entity Framework](https://img.shields.io/badge/Entity%20Framework-Core-512BD4)](https://docs.microsoft.com/en-us/ef/core/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A professional, full-stack web application for managing laboratory supplies, suppliers, and purchase orders. Built with ASP.NET Core MVC, Entity Framework Core, and modern web technologies, following industry-standard design patterns and best practices.
+Web application for managing laboratory supplies, suppliers, and purchase orders. Built with ASP.NET Core MVC and Entity Framework Core.
 
-## 📋 Table of Contents
+## Features
 
-- [Features](#-features)
-- [Technology Stack](#-technology-stack)
-- [Architecture](#-architecture)
-- [Getting Started](#-getting-started)
-- [Project Structure](#-project-structure)
-- [Database Schema](#-database-schema)
-- [API Endpoints](#-api-endpoints)
-- [Screenshots](#-screenshots)
-- [Contributing](#-contributing)
-- [License](#-license)
+- Track lab supplies with quantity monitoring and reorder alerts
+- Manage supplier information and contact details  
+- Create and track purchase orders with partial fulfillment support
+- Upload product images
+- Role-based access control (Admin/User roles)
+- Responsive Bootstrap UI with DataTables
+- AJAX operations and form validation
 
-## ✨ Features
+## Tech Stack
 
-### Core Functionality
-- **Inventory Management**: Track laboratory supplies with real-time quantity monitoring
-- **Supplier Management**: Maintain comprehensive supplier information and contact details
-- **Purchase Order System**: Create and manage purchase orders linked to specific supplies
-- **Reorder Alerts**: Automatic alerts when supplies reach reorder points
-- **Image Management**: Upload and manage product images for visual identification
+**Backend:** ASP.NET Core 8.0 MVC, Entity Framework Core, SQL Server, ASP.NET Core Identity
 
-### Security & Authentication
-- **Identity Management**: Secure user authentication and authorization using ASP.NET Core Identity
-- **Role-Based Access Control**: Admin and User roles with appropriate permissions
-- **Protected Routes**: Area-based authorization for administrative functions
+**Frontend:** Bootstrap 5, jQuery, DataTables, SweetAlert2
 
-### User Experience
-- **Responsive Design**: Mobile-first, responsive UI using Bootstrap 5
-- **Interactive DataTables**: Advanced sorting, filtering, and pagination for large datasets
-- **AJAX Operations**: Smooth, asynchronous data operations without page reloads
-- **Sweet Alerts**: User-friendly confirmation dialogs and notifications
-- **Real-time Validation**: Client-side and server-side validation for data integrity
+**Patterns:** Repository Pattern, Unit of Work, Dependency Injection
 
-## 🛠 Technology Stack
+## Architecture
 
-### Backend
-- **Framework**: ASP.NET Core 8.0 MVC
-- **ORM**: Entity Framework Core 8.0
-- **Database**: SQL Server (LocalDB for development)
-- **Authentication**: ASP.NET Core Identity
-- **Language**: C# 12
-
-### Frontend
-- **UI Framework**: Bootstrap 5.3
-- **JavaScript Libraries**: 
-  - jQuery 3.x
-  - DataTables.js
-  - SweetAlert2
-  - Toastr
-- **Icons**: Bootstrap Icons
-- **CSS**: Custom CSS with Bootstrap theming
-
-### Architecture & Patterns
-- **Repository Pattern**: Abstraction layer for data access
-- **Unit of Work Pattern**: Transaction management across multiple repositories
-- **Dependency Injection**: Built-in ASP.NET Core DI container
-- **Areas**: Organized by functional modules (Admin, Identity, User)
-- **View Models**: Separation of concerns between domain models and presentation
-
-## 🏗 Architecture
-
-This project follows **Clean Architecture** principles with clear separation of concerns:
+Layered architecture with clear separation:
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                  Presentation Layer                 │
-│            (InventoryManagement - MVC)              │
-│  Controllers │ Views │ ViewModels │ wwwroot        │
-└─────────────────────┬───────────────────────────────┘
-                      │
-┌─────────────────────┴───────────────────────────────┐
-│                  Business Layer                      │
-│             (Inventory.Models)                       │
-│    Domain Models │ ViewModels │ Validation          │
-└─────────────────────┬───────────────────────────────┘
-                      │
-┌─────────────────────┴───────────────────────────────┐
-│              Data Access Layer                       │
-│           (Inventory.DataAccess)                     │
-│  DbContext │ Repositories │ Unit of Work            │
-└─────────────────────┬───────────────────────────────┘
-                      │
-┌─────────────────────┴───────────────────────────────┐
-│                 Utility Layer                        │
-│              (Inventory.Utility)                     │
-│     Constants │ Email Service │ Helpers             │
-└──────────────────────────────────────────────────────┘
+Presentation → Models → Data Access → Database
 ```
 
-### Design Patterns Implemented
+See [ARCHITECTURE.md](ARCHITECTURE.md) for details.
 
-1. **Repository Pattern**: Generic repository for CRUD operations
-2. **Unit of Work Pattern**: Manages transactions across repositories
-3. **Dependency Injection**: Loose coupling and testability
-4. **MVC Pattern**: Separation of concerns in presentation layer
-5. **ViewModels**: Data transfer objects for complex views
-
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -151,13 +78,9 @@ This project follows **Clean Architecture** principles with clear separation of 
 
 6. **Access the application**
    
-   Open your browser and navigate to: `https://localhost:5001` or `http://localhost:5000`
+   Navigate to: `https://localhost:5001`
 
-### Default Credentials
-
-After running migrations, you may need to register a new user or seed an admin account.
-
-## 📁 Project Structure
+## Project Structure
 
 ```
 InventoryManagement/
@@ -203,7 +126,7 @@ InventoryManagement/
     └── Program.cs                 # Application entry point
 ```
 
-## 🗄 Database Schema
+## Database Schema
 
 ### Core Entities
 
@@ -232,7 +155,7 @@ InventoryManagement/
 - One-to-Many: Supplier → LabSupplies
 - One-to-Many: LabSupply → PurchaseOrders
 
-## 🔌 API Endpoints
+## Routes
 
 ### Lab Supplies
 | Method | Endpoint | Description |
@@ -265,20 +188,7 @@ InventoryManagement/
 | GET | `/PurchaseOrders/Delete/{id}` | Delete confirmation |
 | POST | `/PurchaseOrders/Delete` | Delete order |
 
-## 📸 Screenshots
-
-> **Note**: Add screenshots of your application here to showcase the UI and features.
-
-### Dashboard
-![Dashboard](docs/images/dashboard.png)
-
-### Lab Supplies Management
-![Lab Supplies](docs/images/lab-supplies.png)
-
-### Supplier Management
-![Suppliers](docs/images/suppliers.png)
-
-## 🧪 Development
+## Development
 
 ### Building the Project
 ```bash
@@ -296,47 +206,14 @@ cd Inventory.DataAccess
 dotnet ef migrations add MigrationName --startup-project ../InventoryManagement
 ```
 
-### Code Standards
-- Follow Microsoft's C# Coding Conventions
-- Use meaningful variable and method names
-- Add XML documentation comments for public APIs
-- Keep methods focused and single-purpose
-- Use async/await for I/O operations
+## Contributing
 
-## 🤝 Contributing
+Pull requests are welcome. For major changes, please open an issue first.
 
-Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
-
-### Development Workflow
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## 📝 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 👤 Author
+## Author
 
-**Karina**
-- GitHub: [@Karinateii](https://github.com/Karinateii)
-- LinkedIn: [Your LinkedIn Profile](https://linkedin.com/in/yourprofile)
-
-## 🙏 Acknowledgments
-
-- ASP.NET Core team for the excellent framework
-- Bootstrap team for the responsive UI framework
-- DataTables for the powerful table plugin
-- The open-source community for inspiration and support
-
-## 📞 Support
-
-For questions or support, please:
-- Open an issue on GitHub
-- Contact via email: your.email@example.com
-
----
-
-⭐ **If you find this project helpful, please consider giving it a star!**
+[@Karinateii](https://github.com/Karinateii)
