@@ -1,67 +1,109 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Linq.Expressions;
 using Inventory.DataAccess.Data;
 using Inventory.DataAccess.Repository.IRepository;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Inventory.DataAccess.Repository
 {
+    /// <summary>
+    /// Generic repository implementation for common data access operations.
+    /// </summary>
+    /// <typeparam name="T">The entity type this repository manages.</typeparam>
     public class Repository<T> : IRepository<T> where T : class
     {
         private readonly AppDbContext _db;
         internal DbSet<T> dbSet;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Repository{T}"/> class.
+        /// </summary>
+        /// <param name="db">The database context.</param>
         public Repository(AppDbContext db)
         {
-            _db = db;
-            //_db.Suppliers == dbSet
-            this.dbSet = _db.Set<T>();
-            _db.LabSupplies.Include(u => u.Supplier).Include(u => u.SupplierID);
+            _db = db ?? throw new ArgumentNullException(nameof(db));
+            dbSet = _db.Set<T>();
         }
 
-        public void Add(T entity)
+        /// <inheritdoc/>
+        public async Task AddAsync(T entity)
         {
-            dbSet.Add(entity);
+            if (entity == null)
+                throw new ArgumentNullException(nameof(entity));
+
+            await dbSet.AddAsync(entity);
         }
 
-        public T Get(Expression<Func<T, bool>> filter, string? includeProperties = null)
+        /// <inheritdoc/>
+        public async Task AddRangeAsync(IEnumerable<T> entities)
         {
-            IQueryable<T> query = dbSet;
+            if (entities == null)
+                throw new ArgumentNullException(nameof(entities));
+
+            await dbSet.AddRangeAsync(entities);
+        }
+
+        /// <inheritdoc/>
+        public async Task<T?> GetAsync(Expression<Func<T, bool>> filter, string? includeProperties = null, bool tracked = true)
+        {
+            if (filter == null)
+                throw new ArgumentNullException(nameof(filter));
+
+            IQueryable<T> query = tracked ? dbSet : dbSet.AsNoTracking();
             query = query.Where(filter);
+
             if (!string.IsNullOrEmpty(includeProperties))
             {
                 foreach (var includeProp in includeProperties.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
                 {
-                    query = query.Include(includeProp);
+                    query = query.Include(includeProp.Trim());
                 }
             }
-            return query.FirstOrDefault();
+
+            return await query.FirstOrDefaultAsync();
         }
 
-        public IEnumerable<T> GetAll(string? includeProperties = null)
+        /// <inheritdoc/>
+        public async Task<IEnumerable<T>> GetAllAsync(string? includeProperties = null, bool tracked = true)
         {
-            IQueryable<T> query = dbSet;
+            IQueryable<T> query = tracked ? dbSet : dbSet.AsNoTracking();
+
             if (!string.IsNullOrEmpty(includeProperties))
             {
-                foreach(var includeProp in includeProperties.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+                foreach (var includeProp in includeProperties.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
                 {
-                    query = query.Include(includeProp);
-                } 
+                    query = query.Include(includeProp.Trim());
+                }
             }
-            return query.ToList();
+
+            return await query.ToListAsync();
         }
 
+        /// <inheritdoc/>
         public void Remove(T entity)
         {
-            dbSet.Remove(entity);   
+            if (entity == null)
+                throw new ArgumentNullException(nameof(entity));
+
+            dbSet.Remove(entity);
         }
 
-        public void RemoveRange(IEnumerable<T> entity)
+        /// <inheritdoc/>
+        public void RemoveRange(IEnumerable<T> entities)
         {
-            dbSet.RemoveRange(entity);
+            if (entities == null)
+                throw new ArgumentNullException(nameof(entities));
+
+            dbSet.RemoveRange(entities);
+        }
+
+        /// <inheritdoc/>
+        public void Update(T entity)
+        {
+            if (entity == null)
+                throw new ArgumentNullException(nameof(entity));
+
+            dbSet.Update(entity);
         }
     }
 }

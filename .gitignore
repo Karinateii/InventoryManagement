@@ -361,3 +361,42 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# CUSTOM ADDITIONS FOR THIS PROJECT
+
+# Application settings with sensitive data
+appsettings.json
+appsettings.Development.json
+appsettings.Production.json
+appsettings.Staging.json
+
+# Keep example settings file
+!appsettings.example.json
+
+# Log files
+logs/
+*.log
+
+# Uploaded images (user content)
+wwwroot/images/supply/*
+!wwwroot/images/supply/.gitkeep
+
+# Environment-specific files
+.env
+.env.local
+.env.*.local
+
+# IDE specific
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Thumbnails
+._*

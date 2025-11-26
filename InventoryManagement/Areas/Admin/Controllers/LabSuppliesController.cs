@@ -1,125 +1,226 @@
-﻿
-using Inventory.DataAccess.Data;
-using Inventory.DataAccess.Repository.IRepository;
+﻿using Inventory.DataAccess.Repository.IRepository;
 using Inventory.Models.Models;
 using Inventory.Models.ViewModels;
+using Inventory.Utility;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
-using System.Linq;
-using System.Text.Json.Serialization;
 using System.Text.Json;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http.Json;
+using System.Text.Json.Serialization;
 
 namespace InventoryManagement.Areas.Admin.Controllers
 {
+    /// <summary>
+    /// Controller for managing laboratory supplies in the admin area.
+    /// </summary>
     [Area("Admin")]
+    [Authorize(Roles = SD.Role_Admin_Manager)]
     public class LabSuppliesController : Controller
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IWebHostEnvironment _webHostEnvironment;
-        public LabSuppliesController(IUnitOfWork unitOfWork, IWebHostEnvironment webHostEnvironment)
+        private readonly ILogger<LabSuppliesController> _logger;
+
+        public LabSuppliesController(
+            IUnitOfWork unitOfWork, 
+            IWebHostEnvironment webHostEnvironment,
+            ILogger<LabSuppliesController> logger)
         {
-            _unitOfWork = unitOfWork;
-            _webHostEnvironment = webHostEnvironment;
+            _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+            _webHostEnvironment = webHostEnvironment ?? throw new ArgumentNullException(nameof(webHostEnvironment));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        // GET: LabSupplies
-        public IActionResult Index()
+        /// <summary>
+        /// Displays the list of all lab supplies.
+        /// </summary>
+        public async Task<IActionResult> Index()
         {
-            List<LabSupply> labSupplyList = _unitOfWork.LabSupply.GetAll(includeProperties:"Supplier").ToList();
-            
-            return View(labSupplyList);
+            try
+            {
+                var labSupplyList = await _unitOfWork.LabSupply.GetAllAsync(includeProperties: "Supplier");
+                return View(labSupplyList);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving lab supplies");
+                TempData["error"] = "An error occurred while loading lab supplies.";
+                return View(new List<LabSupply>());
+            }
         }
       
 
-        // GET: LabSupplies/Create
-        public IActionResult Upsert(int? id)
-        {          
-            LabSupplyVM labSupplyVM = new()
+        /// <summary>
+        /// Displays the form for creating or updating a lab supply.
+        /// </summary>
+        /// <param name="id">The ID of the lab supply to edit, or null for creation.</param>
+        public async Task<IActionResult> Upsert(int? id)
+        {
+            try
             {
-                SupplierList = _unitOfWork.Supplier.GetAll().Select(u => new SelectListItem
+                var suppliers = await _unitOfWork.Supplier.GetAllAsync();
+                
+                var labSupplyVM = new LabSupplyVM
                 {
-                    Text = u.SupplierName,
-                    Value = u.SupplierID.ToString()
+                    SupplierList = suppliers.Select(u => new SelectListItem
+                    {
+                        Text = u.SupplierName,
+                        Value = u.SupplierID.ToString()
+                    }),
+                    LabSupply = new LabSupply()
+                };
 
-                }),
-                LabSupply = new LabSupply()
-            };
+                if (id == null || id == 0)
+                {
+                    // Create mode
+                    return View(labSupplyVM);
+                }
 
-            if(id == null || id == 0)
-            {
-                //Create
+                // Update mode
+                labSupplyVM.LabSupply = await _unitOfWork.LabSupply.GetAsync(u => u.SupplyID == id);
+                
+                if (labSupplyVM.LabSupply == null)
+                {
+                    _logger.LogWarning("Lab supply with ID {Id} not found", id);
+                    TempData["error"] = "Lab supply not found.";
+                    return RedirectToAction(nameof(Index));
+                }
+
                 return View(labSupplyVM);
             }
-            else
+            catch (Exception ex)
             {
-                //Update
-                labSupplyVM.LabSupply = _unitOfWork.LabSupply.Get(u => u.SupplyID==id);
-                return View(labSupplyVM);
+                _logger.LogError(ex, "Error loading upsert form for lab supply ID: {Id}", id);
+                TempData["error"] = "An error occurred while loading the form.";
+                return RedirectToAction(nameof(Index));
             }
-            
         }
 
-        // POST: LabSupplies/Create
+        /// <summary>
+        /// Handles the form submission for creating or updating a lab supply.
+        /// </summary>
         [HttpPost]
-        public IActionResult Upsert(LabSupplyVM labSupplyVM, IFormFile? file)
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Upsert(LabSupplyVM labSupplyVM, IFormFile? file)
         {
-            if (ModelState.IsValid)
+            // Remove ImageURL from validation
+            ModelState.Remove("LabSupply.ImageURL");
+
+            if (!ModelState.IsValid)
             {
-                string wwwRootPath = _webHostEnvironment.WebRootPath;
-                if(file != null)
-                {
-                    string fileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
-                    string productPath = Path.Combine(wwwRootPath, @"images\supply");
-
-                    if(!string.IsNullOrEmpty(labSupplyVM.LabSupply.ImageURL)) 
-                    {
-                        //Delete old image
-                        var oldImagePath =
-                            Path.Combine(wwwRootPath, labSupplyVM.LabSupply.ImageURL.TrimStart('\\'));
-
-                        if(System.IO.File.Exists(oldImagePath))
-                        {
-                            System.IO.File.Delete(oldImagePath);
-                        }
-                    }
-
-                    //Upload New Image
-                    using (var fileStream = new FileStream(Path.Combine(productPath, fileName),FileMode.Create))
-                    {
-                        file.CopyTo(fileStream);
-                    }
-
-                    //Update ImageURL
-                    labSupplyVM.LabSupply.ImageURL = @"\images\supply\" + fileName;
-
-                }
-
-                if(labSupplyVM.LabSupply.SupplyID == 0)
-                {
-                    _unitOfWork.LabSupply.Add(labSupplyVM.LabSupply);
-                }
-                else
-                {
-                    _unitOfWork.LabSupply.update(labSupplyVM.LabSupply);
-                }
-
-                
-                _unitOfWork.Save();
-                TempData["success"] = "LabSupply Created Successfully";
-                return RedirectToAction("Index");
-            }
-            else
-            {
-                labSupplyVM.SupplierList = _unitOfWork.Supplier.GetAll().Select(u => new SelectListItem
+                // Repopulate supplier list
+                var suppliers = await _unitOfWork.Supplier.GetAllAsync();
+                labSupplyVM.SupplierList = suppliers.Select(u => new SelectListItem
                 {
                     Text = u.SupplierName,
                     Value = u.SupplierID.ToString()
                 });
                 return View(labSupplyVM);
-            }         
+            }
+
+            try
+            {
+                string wwwRootPath = _webHostEnvironment.WebRootPath;
+                
+                // Handle image upload
+                if (file != null)
+                {
+                    // Validate file type
+                    string[] allowedExtensions = { ".jpg", ".jpeg", ".png", ".gif" };
+                    string fileExtension = Path.GetExtension(file.FileName).ToLowerInvariant();
+                    
+                    if (!allowedExtensions.Contains(fileExtension))
+                    {
+                        TempData["error"] = "Invalid file type. Only JPG, PNG, and GIF images are allowed.";
+                        return await RepopulateAndReturn(labSupplyVM);
+                    }
+
+                    // Validate file size (5MB max)
+                    if (file.Length > 5 * 1024 * 1024)
+                    {
+                        TempData["error"] = "File size cannot exceed 5MB.";
+                        return await RepopulateAndReturn(labSupplyVM);
+                    }
+
+                    string fileName = Guid.NewGuid().ToString() + fileExtension;
+                    string productPath = Path.Combine(wwwRootPath, "images", "supply");
+
+                    // Ensure directory exists
+                    if (!Directory.Exists(productPath))
+                    {
+                        Directory.CreateDirectory(productPath);
+                    }
+
+                    // Delete old image if updating
+                    if (!string.IsNullOrEmpty(labSupplyVM.LabSupply.ImageURL))
+                    {
+                        var oldImagePath = Path.Combine(wwwRootPath, labSupplyVM.LabSupply.ImageURL.TrimStart('\\', '/'));
+                        if (System.IO.File.Exists(oldImagePath))
+                        {
+                            try
+                            {
+                                System.IO.File.Delete(oldImagePath);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogWarning(ex, "Failed to delete old image: {Path}", oldImagePath);
+                            }
+                        }
+                    }
+
+                    // Upload new image
+                    string filePath = Path.Combine(productPath, fileName);
+                    using (var fileStream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await file.CopyToAsync(fileStream);
+                    }
+
+                    // Update ImageURL with forward slashes
+                    labSupplyVM.LabSupply.ImageURL = "/images/supply/" + fileName;
+                }
+                else if (labSupplyVM.LabSupply.SupplyID == 0)
+                {
+                    // Set default image for new supplies without uploaded image
+                    labSupplyVM.LabSupply.ImageURL = "/images/supply/default.jpg";
+                }
+
+                // Add or update the supply
+                if (labSupplyVM.LabSupply.SupplyID == 0)
+                {
+                    await _unitOfWork.LabSupply.AddAsync(labSupplyVM.LabSupply);
+                    TempData["success"] = "Lab supply created successfully!";
+                    _logger.LogInformation("Created new lab supply: {Name}", labSupplyVM.LabSupply.SupplyName);
+                }
+                else
+                {
+                    _unitOfWork.LabSupply.Update(labSupplyVM.LabSupply);
+                    TempData["success"] = "Lab supply updated successfully!";
+                    _logger.LogInformation("Updated lab supply ID: {Id}", labSupplyVM.LabSupply.SupplyID);
+                }
+
+                await _unitOfWork.SaveAsync();
+                return RedirectToAction(nameof(Index));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saving lab supply");
+                TempData["error"] = "An error occurred while saving the lab supply.";
+                return await RepopulateAndReturn(labSupplyVM);
+            }
+        }
+
+        /// <summary>
+        /// Helper method to repopulate ViewModel and return the view.
+        /// </summary>
+        private async Task<IActionResult> RepopulateAndReturn(LabSupplyVM labSupplyVM)
+        {
+            var suppliers = await _unitOfWork.Supplier.GetAllAsync();
+            labSupplyVM.SupplierList = suppliers.Select(u => new SelectListItem
+            {
+                Text = u.SupplierName,
+                Value = u.SupplierID.ToString()
+            });
+            return View(labSupplyVM);
         }
 
         //// GET: LabSupplies/Edit/5
@@ -192,44 +293,87 @@ namespace InventoryManagement.Areas.Admin.Controllers
 
         #region API CALLS
 
+        /// <summary>
+        /// API endpoint to get all lab supplies for DataTables.
+        /// </summary>
         [HttpGet]
-        public IActionResult GetAll()
+        public async Task<IActionResult> GetAll()
         {
-            List<LabSupply> labSupplyList = _unitOfWork.LabSupply.GetAll(includeProperties: "Supplier").ToList();
-
-            var jsonOptions = new JsonSerializerOptions
+            try
             {
-                ReferenceHandler = ReferenceHandler.Preserve,
-                // Add any other serialization options if needed
-            };
+                var labSupplyList = await _unitOfWork.LabSupply.GetAllAsync(includeProperties: "Supplier");
 
-            var jsonData = JsonSerializer.Serialize(new { data = labSupplyList }, jsonOptions);
+                var jsonOptions = new JsonSerializerOptions
+                {
+                    ReferenceHandler = ReferenceHandler.Preserve,
+                    PropertyNamingPolicy = null
+                };
 
-            return Content(jsonData, "application/json");
+                var jsonData = JsonSerializer.Serialize(new { data = labSupplyList }, jsonOptions);
+                return Content(jsonData, "application/json");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving lab supplies for DataTable");
+                return Json(new { data = new List<LabSupply>() });
+            }
         }
 
+        /// <summary>
+        /// API endpoint to delete a lab supply.
+        /// </summary>
         [HttpDelete]
-        public IActionResult Delete(int? id)
+        public async Task<IActionResult> Delete(int? id)
         {
-            var supplyToBeDeleted = _unitOfWork.LabSupply.Get(u => u.SupplyID == id);
-            if (supplyToBeDeleted == null)
+            if (id == null)
             {
-                return Json(new { success = false, message = "Error while deleting" });
+                return Json(new { success = false, message = "Invalid ID" });
             }
 
-           var oldImagePath = Path.Combine(_webHostEnvironment.WebRootPath,
-               supplyToBeDeleted.ImageURL.TrimStart('\\'));
-
-            if (System.IO.File.Exists(oldImagePath))
+            try
             {
-                System.IO.File.Delete(oldImagePath);
+                var supplyToBeDeleted = await _unitOfWork.LabSupply.GetAsync(u => u.SupplyID == id);
+                
+                if (supplyToBeDeleted == null)
+                {
+                    _logger.LogWarning("Attempted to delete non-existent lab supply ID: {Id}", id);
+                    return Json(new { success = false, message = "Lab supply not found" });
+                }
+
+                // Delete associated image if exists
+                if (!string.IsNullOrEmpty(supplyToBeDeleted.ImageURL) && 
+                    supplyToBeDeleted.ImageURL != "/images/supply/default.jpg")
+                {
+                    var imagePath = Path.Combine(
+                        _webHostEnvironment.WebRootPath,
+                        supplyToBeDeleted.ImageURL.TrimStart('\\', '/'));
+
+                    if (System.IO.File.Exists(imagePath))
+                    {
+                        try
+                        {
+                            System.IO.File.Delete(imagePath);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Failed to delete image file: {Path}", imagePath);
+                        }
+                    }
+                }
+
+                _unitOfWork.LabSupply.Remove(supplyToBeDeleted);
+                await _unitOfWork.SaveAsync();
+
+                _logger.LogInformation("Deleted lab supply ID: {Id}, Name: {Name}", id, supplyToBeDeleted.SupplyName);
+                return Json(new { success = true, message = "Lab supply deleted successfully" });
             }
-
-            _unitOfWork.LabSupply.Remove(supplyToBeDeleted);
-            _unitOfWork.Save();
-
-            return Json(new { success = true, message = "Delete Successful" });
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting lab supply ID: {Id}", id);
+                return Json(new { success = false, message = "An error occurred while deleting the lab supply" });
+            }
         }
+
         #endregion
     }
 }

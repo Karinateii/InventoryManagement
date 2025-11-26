@@ -1,27 +1,43 @@
 ﻿using Inventory.DataAccess.Data;
 using Inventory.DataAccess.Repository.IRepository;
 using Inventory.Models.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
 namespace Inventory.DataAccess.Repository
 {
+    /// <summary>
+    /// Repository implementation for Supplier entity operations.
+    /// </summary>
     public class SupplierRepository : Repository<Supplier>, ISupplierRepository
     {
-        private AppDbContext _db;
+        private readonly AppDbContext _db;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SupplierRepository"/> class.
+        /// </summary>
+        /// <param name="db">The database context.</param>
         public SupplierRepository(AppDbContext db) : base(db)
         {
-            _db = db;
+            _db = db ?? throw new ArgumentNullException(nameof(db));
         }
 
-        public void update(Supplier obj)
+        /// <inheritdoc/>
+        public void Update(Supplier obj)
         {
+            if (obj == null)
+                throw new ArgumentNullException(nameof(obj));
+
             _db.Suppliers.Update(obj);
+        }
+
+        /// <inheritdoc/>
+        public async Task<Supplier?> GetByEmailAsync(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                throw new ArgumentException("Email cannot be null or empty.", nameof(email));
+
+            return await _db.Suppliers
+                .FirstOrDefaultAsync(s => s.ContactEmail.ToLower() == email.ToLower());
         }
     }
 }
