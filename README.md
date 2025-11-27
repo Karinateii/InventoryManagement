@@ -216,4 +216,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Author
 
-[@Karinateii](https://github.com/Karinateii)
+**Doutimiwei Ebenezer**
+
+- GitHub: [@Karinateii](https://github.com/Karinateii)
+- LinkedIn: [Ebenezer Doutimiwei](https://www.linkedin.com/in/ebenezer-doutimiwei-b929a6208/)
+- Email: karinateidoutimiwei@gmail.com
