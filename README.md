@@ -80,6 +80,30 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for details.
    
    Navigate to: `https://localhost:5001`
 
+## Screenshots
+
+### Dashboard
+![Admin Dashboard](docs/images/Admin%20Dashboard1%20-%20Inventory%20Management%20System%20.png)
+
+### Lab Supplies Management
+![Lab Supplies List](docs/images/LabSupplies%20-%20Inventory%20Management%20System.png)
+
+![Create Lab Supply](docs/images/LabSupply%20Create-%20Inventory%20Management%20System.png)
+
+### Purchase Orders with Partial Fulfillment Tracking
+![Purchase Orders](docs/images/Purchase%20Orders%20-%20Inventory%20Management%20System.png)
+
+![Create Purchase Order](docs/images/Create%20PurchaseOrder-%20Inventory%20Management%20System.png)
+
+### Stock Adjustment
+![Stock Adjustment](docs/images/Stock%20Adjustment%20-%20Inventory%20Management%20System.png)
+
+### Supplier Management
+![Suppliers List](docs/images/Supplier%20List-%20Inventory%20Management%20System.png)
+
+### Authentication
+![Login Page](docs/images/Login%20-%20Inventory%20Management%20System.png)
+
 ## Project Structure
 
 ```
